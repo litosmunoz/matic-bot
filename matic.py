@@ -122,34 +122,35 @@ def strategy_long(qty, open_position = False):
     print("-----------------------------------------")
 
     if df.Buy.iloc[-1]:
-        mail_content = "Matic Open Long"
-        message.attach(MIMEText(mail_content, 'plain'))
+        try : 
+            mail_content = "Matic Open Long"
+            message.attach(MIMEText(mail_content, 'plain'))
         
-        # Create SMTP session for sending the mail
-        session_mail = smtplib.SMTP('smtp.gmail.com', 587)  # use gmail with port
-        session_mail.starttls()  # enable security
+             # Create SMTP session for sending the mail
+            session_mail = smtplib.SMTP('smtp.gmail.com', 587)  # use gmail with port
+            session_mail.starttls()  # enable security
 
-        # login with mail_id and password
-        session_mail.login(sender_address, sender_pass)
-        text = message.as_string()
-        session_mail.sendmail(sender_address, receiver_address, text)
-        session_mail.quit()
+            # login with mail_id and password
+            session_mail.login(sender_address, sender_pass)
+            text = message.as_string()
+            session_mail.sendmail(sender_address, receiver_address, text)
+            session_mail.quit()
 
-        from pybit import usdt_perpetual
-        session = usdt_perpetual.HTTP(
-        endpoint='https://api.bybit.com',
-        api_key = api_key_pw,
-        api_secret= api_secret_pw)
+            from pybit import usdt_perpetual
+            session = usdt_perpetual.HTTP(
+            endpoint='https://api.bybit.com',
+            api_key = api_key_pw,
+            api_secret= api_secret_pw)
 
-        buyprice = round(df.Close.iloc[-1],3)
+            buyprice = round(df.Close.iloc[-1],3)
 
-        print("-----------------------------------------")
+            print("-----------------------------------------")
 
-        print(f"Buyprice: {buyprice}")
+            print(f"Buyprice: {buyprice}")
 
-        print("-----------------------------------------------------------------------------------------------------------------------------------------------")
+            print("-----------------------------------------------------------------------------------------------------------------------------------------------")
 
-        order = session.place_active_order(symbol="MATICUSDT",
+            order = session.place_active_order(symbol="MATICUSDT",
                                                 side="Buy",
                                                 order_type="Market",
                                                 qty= qty,
@@ -158,14 +159,49 @@ def strategy_long(qty, open_position = False):
                                                 close_on_trigger=False,
                                                 take_profit = round(buyprice * 1.06,3),
                                                 stop_loss = round(buyprice * 0.98,3))
-        print(order)
+            print(order)
 
-        matic_order_id = str(order['result']['order_id'])
-        print("-----------------------------------------------------------------------------------------------------------------------------------------------")
-        print(f"Order id: {matic_order_id}") 
-        print("---------------------------------------------------")
+            matic_order_id = str(order['result']['order_id'])
+            print("-----------------------------------------------------------------------------------------------------------------------------------------------")
+            print(f"Order id: {matic_order_id}") 
+            print("---------------------------------------------------")
 
-        open_position = True
+            open_position = True
+
+        except: 
+            time.sleep(40)
+
+            from pybit import usdt_perpetual
+            session = usdt_perpetual.HTTP(
+            endpoint='https://api.bybit.com',
+            api_key = api_key_pw,
+            api_secret= api_secret_pw)
+
+            buyprice = round(df.Close.iloc[-1],3)
+
+            print("-----------------------------------------")
+
+            print(f"Buyprice: {buyprice}")
+
+            print("-----------------------------------------------------------------------------------------------------------------------------------------------")
+
+            order = session.place_active_order(symbol="MATICUSDT",
+                                                side="Buy",
+                                                order_type="Market",
+                                                qty= qty,
+                                                time_in_force="GoodTillCancel",
+                                                reduce_only=False,
+                                                close_on_trigger=False,
+                                                take_profit = round(buyprice * 1.06,3),
+                                                stop_loss = round(buyprice * 0.98,3))
+            print(order)
+
+            matic_order_id = str(order['result']['order_id'])
+            print("-----------------------------------------------------------------------------------------------------------------------------------------------")
+            print(f"Order id: {matic_order_id}") 
+            print("---------------------------------------------------")
+
+            open_position = True
 
     while open_position:
         time.sleep(30)
@@ -177,7 +213,7 @@ def strategy_long(qty, open_position = False):
         print(f'RSI Target: 72' + '                RSI: ' + str(df.RSI.iloc[-1]))
         print("---------------------------------------------------")
 
-        if df.Close[-1] < buyprice * 0.98: 
+        if df.Close[-1] <= buyprice * 0.98: 
             print("Closed Position")
             open_position = False
 
@@ -195,7 +231,7 @@ def strategy_long(qty, open_position = False):
             session_mail.quit()
             break
         
-        elif df.Close[-1] > buyprice* 1.06:
+        elif df.Close[-1] >= buyprice* 1.06:
             print("Closed Position")
             open_position = False
 
