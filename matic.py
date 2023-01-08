@@ -3,13 +3,16 @@
 
 # In[1]:
 
+# Variables
+rsi_enter = 20
+rsi_exit = 72
+
 
 import pandas as pd
 import numpy as np
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pybit import spot  # <-- import HTTP & WSS for spot
 from dotenv import load_dotenv
 import os
 import time
@@ -30,7 +33,8 @@ load_dotenv()
 #Loading my Bybit's API keys from the dotenv file
 api_key_pw = os.getenv('api_key_bot_IP')
 api_secret_pw = os.getenv('api_secret_bot_IP')
-
+sender_pass = os.getenv('mail_key')
+receiver_address = os.getenv('mail')
 
 # In[4]:
 
@@ -38,6 +42,14 @@ api_secret_pw = os.getenv('api_secret_bot_IP')
 #Establishing Connection with the API (SPOT)
 from pybit import spot
 session_auth = spot.HTTP(
+    endpoint='https://api.bybit.com',
+    api_key = api_key_pw,
+    api_secret= api_secret_pw
+)
+
+#Establishing Connection with the API (FUTURES)
+from pybit import usdt_perpetual
+session = usdt_perpetual.HTTP(
     endpoint='https://api.bybit.com',
     api_key = api_key_pw,
     api_secret= api_secret_pw
@@ -82,7 +94,7 @@ class Signals:
     def get_trigger(self):
         df_2 = pd.DataFrame()
         for i in range(self.lags + 1):
-            mask = (self.df["RSI"].shift(i) < 19)
+            mask = (self.df["RSI"].shift(i) < rsi_enter)
             df_2 = df_2.append(mask, ignore_index = True)
         return df_2.sum(axis= 0)
     
@@ -98,8 +110,7 @@ class Signals:
 
 #The mail addresses and password
 sender_address = 'pythontradingbot11@gmail.com'
-sender_pass = os.getenv('mail_key')
-receiver_address = os.getenv('mail')
+
 #Setup the MIME
 message = MIMEMultipart() 
 message_SL = MIMEMultipart()
@@ -120,6 +131,9 @@ def strategy_long(qty, open_position = False):
     print(f'Current Close is '+str(df.Close.iloc[-1]))
     print(f'Current RSI is ' + str(df.RSI.iloc[-1]))
     print("-----------------------------------------")
+    buyprice = round(df.Close.iloc[-1],4)
+    tp = round(buyprice * 1.06,4)
+    sl = round(buyprice * 0.98,4)
 
     if df.Buy.iloc[-1]:
         try : 
@@ -135,15 +149,7 @@ def strategy_long(qty, open_position = False):
             text = message.as_string()
             session_mail.sendmail(sender_address, receiver_address, text)
             session_mail.quit()
-
-            from pybit import usdt_perpetual
-            session = usdt_perpetual.HTTP(
-            endpoint='https://api.bybit.com',
-            api_key = api_key_pw,
-            api_secret= api_secret_pw)
-
-            buyprice = round(df.Close.iloc[-1],3)
-
+            
             print("-----------------------------------------")
 
             print(f"Buyprice: {buyprice}")
@@ -157,8 +163,8 @@ def strategy_long(qty, open_position = False):
                                                 time_in_force="GoodTillCancel",
                                                 reduce_only=False,
                                                 close_on_trigger=False,
-                                                take_profit = round(buyprice * 1.06,3),
-                                                stop_loss = round(buyprice * 0.98,3))
+                                                take_profit = tp,
+                                                stop_loss = sl)
             print(order)
 
             matic_order_id = str(order['result']['order_id'])
@@ -169,15 +175,7 @@ def strategy_long(qty, open_position = False):
             open_position = True
 
         except: 
-            time.sleep(40)
-
-            from pybit import usdt_perpetual
-            session = usdt_perpetual.HTTP(
-            endpoint='https://api.bybit.com',
-            api_key = api_key_pw,
-            api_secret= api_secret_pw)
-
-            buyprice = round(df.Close.iloc[-1],3)
+            time.sleep(20)
 
             print("-----------------------------------------")
 
@@ -192,8 +190,8 @@ def strategy_long(qty, open_position = False):
                                                 time_in_force="GoodTillCancel",
                                                 reduce_only=False,
                                                 close_on_trigger=False,
-                                                take_profit = round(buyprice * 1.06,3),
-                                                stop_loss = round(buyprice * 0.98,3))
+                                                take_profit = tp,
+                                                stop_loss = sl)
             print(order)
 
             matic_order_id = str(order['result']['order_id'])
@@ -209,11 +207,11 @@ def strategy_long(qty, open_position = False):
         df = get5minutedata()
         apply_technicals(df)
         print(f"Buyprice: {buyprice}" + '             Close: ' + str(df.Close.iloc[-1]))
-        print(f'Target: ' + str(round(buyprice * 1.06,3)) + "                Stop: " + str(round(buyprice * 0.98,3)))
+        print(f'Target: ' + str(tp) + "                Stop: " + str(sl))
         print(f'RSI Target: 72' + '                RSI: ' + str(df.RSI.iloc[-1]))
         print("---------------------------------------------------")
 
-        if df.Close[-1] <= buyprice * 0.98: 
+        if df.Close[-1] <= sl: 
             print("Closed Position")
             open_position = False
 
@@ -231,7 +229,7 @@ def strategy_long(qty, open_position = False):
             session_mail.quit()
             break
         
-        elif df.Close[-1] >= buyprice* 1.06:
+        elif df.Close[-1] >= tp:
             print("Closed Position")
             open_position = False
 
@@ -249,7 +247,7 @@ def strategy_long(qty, open_position = False):
             session_mail.quit()
             break
 
-        elif df.RSI[-1] > 72:
+        elif df.RSI[-1] > rsi_exit:
             
             try:
                 print(session.place_active_order(symbol="MATICUSDT",
