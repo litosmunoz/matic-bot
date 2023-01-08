@@ -59,7 +59,7 @@ session = usdt_perpetual.HTTP(
 # In[5]:
 
 
-#This function gets Real MATIC Price Data and creates a smooth dataframe that refreshes every 15 minutes
+#This function gets Real MATIC Price Data and creates a smooth dataframe that refreshes every 5 minutes
 def get5minutedata():
     frame = pd.DataFrame(session_auth.query_kline(symbol="MATICUSDT", interval="5m")["result"])
     frame = frame.iloc[:,: 6]
@@ -202,7 +202,7 @@ def strategy_long(qty, open_position = False):
             open_position = True
 
     while open_position:
-        time.sleep(30)
+        time.sleep(20)
                     
         df = get5minutedata()
         apply_technicals(df)
@@ -296,5 +296,5 @@ def strategy_long(qty, open_position = False):
 
 
 while True: 
-    strategy_long(1200)
+    strategy_long(1500)
     time.sleep(30)
