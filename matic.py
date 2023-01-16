@@ -4,10 +4,12 @@
 # In[1]:
 
 # Variables
+SYMBOL = "MATICUSDT"
+INTERVAL = "5m"
 RSI_ENTER = 20
 RSI_EXIT = 72
-WINDOW = 14
-SMA = 3
+RSI_WINDOW = 14
+STOCH_SMA = 3
 REWARD = 1.06
 RISK = 0.98
 
@@ -65,7 +67,7 @@ session = usdt_perpetual.HTTP(
 
 #This function gets Real MATIC Price Data and creates a smooth dataframe that refreshes every 5 minutes
 def get5minutedata():
-    frame = pd.DataFrame(session_auth.query_kline(symbol="MATICUSDT", interval="5m")["result"])
+    frame = pd.DataFrame(session_auth.query_kline(symbol=SYMBOL, interval=INTERVAL)["result"])
     frame = frame.iloc[:,: 6]
     frame.columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume']
     frame = frame.set_index("Time")
@@ -79,9 +81,9 @@ def get5minutedata():
 
 #Function to apply some technical indicators from the ta library
 def apply_technicals(df):
-    df["K"] = ta.momentum.stochrsi(df.Close, window= WINDOW)
-    df["D"] = df["K"].rolling(SMA).mean()
-    df["RSI"] = ta.momentum.rsi(df.Close, window = WINDOW)
+    df["K"] = ta.momentum.stochrsi(df.Close, window= RSI_WINDOW)
+    df["D"] = df["K"].rolling(STOCH_SMA).mean()
+    df["RSI"] = ta.momentum.rsi(df.Close, window = RSI_WINDOW)
     df.dropna(inplace=True)
 
 
