@@ -8,6 +8,8 @@ RSI_ENTER = 20
 RSI_EXIT = 72
 WINDOW = 14
 SMA = 3
+REWARD = 1.06
+RISK = 0.98
 
 
 import pandas as pd
@@ -156,8 +158,8 @@ def strategy_long(qty, open_position = False):
 
     if df.Buy.iloc[-1]:
         buyprice = round(df.Close.iloc[-1],4)
-        tp = round(buyprice * 1.06,4)
-        sl = round(buyprice * 0.98,4)
+        tp = round(buyprice * REWARD,4)
+        sl = round(buyprice * RISK,4)
         send_email(subject = "Matic Open Long", buy_price=buyprice, exit_price=tp, stop=sl)
         
         print("-----------------------------------------")
