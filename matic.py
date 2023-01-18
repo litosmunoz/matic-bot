@@ -170,7 +170,7 @@ def strategy_long(qty, open_position = False):
 
         print("-----------------------------------------------------------------------------------------------------------------------------------------------")
 
-        order = session.place_active_order(symbol="MATICUSDT",
+        order = session.place_active_order(symbol=SYMBOL,
                                             side="Buy",
                                             order_type="Market",
                                             qty= qty,
@@ -199,21 +199,21 @@ def strategy_long(qty, open_position = False):
         if df.Close[-1] <= sl: 
             result = round((sl - buyprice) * qty,2)
             print("Closed Position")
-            open_position = False
             send_email(subject="Matic Long SL", result = result, buy_price=buyprice, stop= sl)
+            open_position = False
             exit()
         
         elif df.Close[-1] >= tp:
             result= round((tp - buyprice) * qty, 2)
             print("Closed Position")
-            open_position = False
             send_email(subject ="Matic Long TP", result = result, buy_price=buyprice, exit_price= tp)
+            open_position = False
             break
 
         elif df.RSI[-1] > RSI_EXIT:
             
             try:
-                print(session.place_active_order(symbol="MATICUSDT",
+                print(session.place_active_order(symbol=SYMBOL,
                                                 side="Sell",
                                                 order_type="Market",
                                                 qty= qty,
@@ -224,8 +224,8 @@ def strategy_long(qty, open_position = False):
                 rsi_exit_price = round(df.Close.iloc[-1],4)
                 result= round((rsi_exit_price - buyprice)*qty, 2)           
                 print("Closed position")
-                open_position = False
                 send_email(subject = f"Matic Long Closed - RSI > {RSI_EXIT}", result=result, buy_price=buyprice, exit_price= rsi_exit_price)
+                open_position = False
                 break
             
             except: 
@@ -238,4 +238,4 @@ def strategy_long(qty, open_position = False):
 
 while True: 
     strategy_long(1500)
-    time.sleep(15)
+    time.sleep(20)
