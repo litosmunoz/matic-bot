@@ -238,5 +238,5 @@ def strategy_long(qty, open_position = False):
 
 
 while True: 
-    strategy_long(1500)
+    strategy_long(1000)
     time.sleep(15)
