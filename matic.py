@@ -6,12 +6,14 @@
 # Variables
 SYMBOL = "MATICUSDT"
 INTERVAL = "5m"
-RSI_ENTER = 20
+RSI_ENTER = 21
 RSI_EXIT = 72
 RSI_WINDOW = 14
 STOCH_SMA = 3
 REWARD = 1.06
 RISK = 0.98
+LIMIT_ORDER = 0.99
+MINUTES = 150
 
 
 import pandas as pd
@@ -159,20 +161,21 @@ def strategy_long(qty, open_position = False):
     
 
     if df.Buy.iloc[-1]:
-        buyprice = round(df.Close.iloc[-1],4)
-        tp = round(buyprice * REWARD,4)
-        sl = round(buyprice * RISK,4)
-        send_email(subject = "Matic Open Long", buy_price=buyprice, exit_price=tp, stop=sl)
+        price = round(df.Close.iloc[-1],4)
+        buyprice_limit = round(price * LIMIT_ORDER,4)
+        tp = round(buyprice_limit * REWARD,4)
+        sl = round(buyprice_limit * RISK,4)
+        send_email(subject = "Matic Open Long", buy_price=buyprice_limit, exit_price=tp, stop=sl)
         
         print("-----------------------------------------")
 
-        print(f"Buyprice: {buyprice}")
+        print(f"Buyprice: {buyprice_limit}")
 
         print("-----------------------------------------------------------------------------------------------------------------------------------------------")
 
         order = session.place_active_order(symbol=SYMBOL,
                                             side="Buy",
-                                            order_type="Market",
+                                            order_type="Limit",
                                             qty= qty,
                                             time_in_force="GoodTillCancel",
                                             reduce_only=False,
@@ -186,28 +189,72 @@ def strategy_long(qty, open_position = False):
         print(f"Order id: {matic_order_id}") 
         print("---------------------------------------------------")
 
-        open_position = True
+        # Set the expiration time for the order (150 mins from now)
+        expiration_time = int(time.time()) + (MINUTES*60)
+        time_runner = float((expiration_time - int(time.time()))/ 60)
+
+        # Wait until the expiration time
+        while int(time.time()) < expiration_time:
+            # Sleep for 10 seconds before checking the order status again
+            time.sleep(10)
+
+            # Check the status of the order
+            order_info = session.get_active_order(symbol= SYMBOL)
+            order_status = str(order_info['result']["data"][0]['order_status'])
+            print(f'Order Status: {order_status}')
+            print(f'Time (mins) remaining for the order to be filled : {time_runner}')
+            print("------------------------")
+
+            # If the order has been filled or cancelled, exit the loop
+            if order_status in ["Filled"]:
+                open_position = True
+                send_email(subject=f"{SYMBOL} Limit Order Activated")
+                break
+            elif order_status in ["Cancelled"]:
+                open_position = False 
+                send_email(subject=f"{SYMBOL} Order cancelled manually")
+                break
+            
+        
+        if int(time.time()) > expiration_time:
+            order_info = session.get_active_order(symbol= SYMBOL)
+            order_status = str(order_info['result']["data"][0]['order_status'])
+            print(order_status)
+            print("----------------------------------------------------------------------")
+
+            if order_status not in ["Filled"]: 
+                try:
+                    cancel_order = session.cancel_all_active_orders(symbol= SYMBOL)
+                    print(cancel_order)
+                    send_email(subject= f"{SYMBOL} Limit Order desactivated...")
+                    open_position= False
+                    exit()
+                except: 
+                    print("No orders need to be cancelled")
 
     while open_position:
         time.sleep(10)
         df = get5minutedata()
         apply_technicals(df)
-        print(f"Buyprice: {buyprice}" + '             Close: ' + str(df.Close.iloc[-1]))
+        current_price = round(df.Close.iloc[-1], 2)
+        current_profit = round((current_price-buyprice_limit) * qty, 2)
+        print(f"Buyprice: {buyprice_limit}" + '             Close: ' + str(df.Close.iloc[-1]))
         print(f'Target: ' + str(tp) + "                Stop: " + str(sl))
         print(f'RSI Target: {RSI_EXIT}                RSI: {round(df.RSI.iloc[-1], 2)}')
+        print(f'Current Profit : {current_profit}')
         print("---------------------------------------------------")
 
         if df.Close[-1] <= sl: 
-            result = round((sl - buyprice) * qty,2)
+            result = round((sl - buyprice_limit) * qty,2)
             print("Closed Position")
-            send_email(subject="Matic Long SL", result = result, buy_price=buyprice, stop= sl)
+            send_email(subject=f"{SYMBOL} Long SL", result = result, buy_price=buyprice_limit, stop= sl)
             open_position = False
             exit()
         
         elif df.Close[-1] >= tp:
-            result= round((tp - buyprice) * qty, 2)
+            result= round((tp - buyprice_limit) * qty, 2)
             print("Closed Position")
-            send_email(subject ="Matic Long TP", result = result, buy_price=buyprice, exit_price= tp)
+            send_email(subject =f"{SYMBOL} Long TP", result = result, buy_price=buyprice_limit, exit_price= tp)
             open_position = False
             break
 
@@ -223,9 +270,9 @@ def strategy_long(qty, open_position = False):
                                                 close_on_trigger=False)) 
                 print("--------------------")  
                 rsi_exit_price = round(df.Close.iloc[-1],4)
-                result= round((rsi_exit_price - buyprice)*qty, 2)           
+                result= round((rsi_exit_price - buyprice_limit)*qty, 2)           
                 print("Closed position")
-                send_email(subject = f"Matic Long Closed - RSI > {RSI_EXIT}", result=result, buy_price=buyprice, exit_price= rsi_exit_price)
+                send_email(subject = f"Matic Long Closed - RSI > {RSI_EXIT}", result=result, buy_price=buyprice_limit, exit_price= rsi_exit_price)
                 open_position = False
                 break
             
