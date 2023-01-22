@@ -14,6 +14,7 @@ REWARD = 1.06
 RISK = 0.98
 LIMIT_ORDER = 0.99
 MINUTES = 150
+QUANTITY = 1000
 
 
 import pandas as pd
@@ -149,7 +150,7 @@ def send_email(subject, result = None, buy_price = None, exit_price = None, stop
 # In[9]:
 
 
-def strategy_long(qty, open_position = False):
+def strategy_long(qty = QUANTITY, open_position = False):
     df= get5minutedata()
     apply_technicals(df)
     inst = Signals(df, 0)
@@ -165,7 +166,7 @@ def strategy_long(qty, open_position = False):
         buyprice_limit = round(price * LIMIT_ORDER,4)
         tp = round(buyprice_limit * REWARD,4)
         sl = round(buyprice_limit * RISK,4)
-        send_email(subject = "Matic Open Long", buy_price=buyprice_limit, exit_price=tp, stop=sl)
+        send_email(subject = f"{SYMBOL} Open Long Limit Order", buy_price=buyprice_limit, exit_price=tp, stop=sl)
         
         print("-----------------------------------------")
 
@@ -177,6 +178,7 @@ def strategy_long(qty, open_position = False):
                                             side="Buy",
                                             order_type="Limit",
                                             qty= qty,
+                                            price = buyprice_limit,
                                             time_in_force="GoodTillCancel",
                                             reduce_only=False,
                                             close_on_trigger=False,
@@ -228,7 +230,7 @@ def strategy_long(qty, open_position = False):
                     print(cancel_order)
                     send_email(subject= f"{SYMBOL} Limit Order desactivated...")
                     open_position= False
-                    exit()
+                    
                 except: 
                     print("No orders need to be cancelled")
 
@@ -244,14 +246,14 @@ def strategy_long(qty, open_position = False):
         print(f'Current Profit : {current_profit}')
         print("---------------------------------------------------")
 
-        if df.Close[-1] <= sl: 
+        if current_price <= sl: 
             result = round((sl - buyprice_limit) * qty,2)
             print("Closed Position")
             send_email(subject=f"{SYMBOL} Long SL", result = result, buy_price=buyprice_limit, stop= sl)
             open_position = False
             exit()
         
-        elif df.Close[-1] >= tp:
+        elif current_price >= tp:
             result= round((tp - buyprice_limit) * qty, 2)
             print("Closed Position")
             send_email(subject =f"{SYMBOL} Long TP", result = result, buy_price=buyprice_limit, exit_price= tp)
@@ -272,7 +274,7 @@ def strategy_long(qty, open_position = False):
                 rsi_exit_price = round(df.Close.iloc[-1],4)
                 result= round((rsi_exit_price - buyprice_limit)*qty, 2)           
                 print("Closed position")
-                send_email(subject = f"Matic Long Closed - RSI > {RSI_EXIT}", result=result, buy_price=buyprice_limit, exit_price= rsi_exit_price)
+                send_email(subject = f"{SYMBOL} Long Closed - RSI > {RSI_EXIT}", result=result, buy_price=buyprice_limit, exit_price= rsi_exit_price)
                 open_position = False
                 break
             
@@ -285,5 +287,5 @@ def strategy_long(qty, open_position = False):
 
 
 while True: 
-    strategy_long(1000)
+    strategy_long(QUANTITY)
     time.sleep(15)
