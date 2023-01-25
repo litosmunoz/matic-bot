@@ -6,14 +6,16 @@
 # Variables
 SYMBOL = "MATICUSDT"
 INTERVAL = "5m"
-RSI_ENTER = 21
+RSI_ENTER = 26
+D_DIFF = 0.045
+K_ENTER = 0.25
 RSI_EXIT = 74
 RSI_WINDOW = 14
 STOCH_SMA = 3
 REWARD = 1.06
 RISK = 0.98
 LIMIT_ORDER = 0.98
-MINUTES = 240
+MINUTES = 300
 QUANTITY = 1000
 
 
@@ -110,7 +112,9 @@ class Signals:
     # Is the trigger fulfilled and are all buying conditions fulfilled?
     def decide(self):
          self.df["trigger"] = np.where(self.get_trigger(), 1, 0)
-         self.df["Buy"]= np.where((self.df.trigger), 1, 0)
+         self.df["Buy"]= np.where((self.df.trigger)
+                                    (self.df["K"] < K_ENTER) &
+                                    (self.df["K"] > self.df["D"] + D_DIFF), 1, 0)
 
 
 
@@ -153,11 +157,11 @@ def send_email(subject, result = None, buy_price = None, exit_price = None, stop
 def strategy_long(qty = QUANTITY, open_position = False):
     df= get5minutedata()
     apply_technicals(df)
-    inst = Signals(df, 0)
+    inst = Signals(df, 1)
     inst.decide()
     print(f'Current Time is ' + str(df.index[-1]))
     print(f'Current Close is '+str(df.Close.iloc[-1]))
-    print(f"RSI: {round(df.RSI.iloc[-1], 2)}")
+    print(f"RSI: {round(df.RSI.iloc[-1], 2)}    K: {round(df.K.iloc[-1], 2)}    D: {round(df.D.iloc[-1], 2)}")
     print("-----------------------------------------")
     
 
@@ -191,7 +195,7 @@ def strategy_long(qty = QUANTITY, open_position = False):
         print(f"Order id: {matic_order_id}") 
         print("---------------------------------------------------")
 
-        # Set the expiration time for the order (150 mins from now)
+        # Set the expiration time for the order (300 mins from now)
         expiration_time = int(time.time()) + (MINUTES*60)
 
         # Wait until the expiration time
@@ -242,7 +246,9 @@ def strategy_long(qty = QUANTITY, open_position = False):
         current_profit = round((current_price-buyprice_limit) * qty, 2)
         print(f"Buyprice: {buyprice_limit}" + '             Close: ' + str(df.Close.iloc[-1]))
         print(f'Target: ' + str(tp) + "                Stop: " + str(sl))
-        print(f'RSI Target: {RSI_EXIT}                RSI: {round(df.RSI.iloc[-1], 2)}')
+        print(f"RSI: {round(df.RSI.iloc[-1], 2)}       K: {round(df.K.iloc[-1], 2)}       D: {round(df.D.iloc[-1], 2)}")
+        print(f'RSI Target: {RSI_EXIT}')
+        print(f"K > D: {round(df.K.iloc[-1], 2) > round(df.D.iloc[-1], 2)}")
         print(f'Current Profit : {current_profit}')
         print("---------------------------------------------------")
 
@@ -288,4 +294,4 @@ def strategy_long(qty = QUANTITY, open_position = False):
 
 while True: 
     strategy_long(QUANTITY)
-    time.sleep(15)
+    time.sleep(120)
