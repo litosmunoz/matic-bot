@@ -7,13 +7,13 @@
 SYMBOL = "MATICUSDT"
 INTERVAL = "5m"
 RSI_ENTER = 21
-RSI_EXIT = 72
+RSI_EXIT = 74
 RSI_WINDOW = 14
 STOCH_SMA = 3
 REWARD = 1.06
 RISK = 0.98
-LIMIT_ORDER = 0.99
-MINUTES = 150
+LIMIT_ORDER = 0.98
+MINUTES = 240
 QUANTITY = 1000
 
 
@@ -199,7 +199,7 @@ def strategy_long(qty = QUANTITY, open_position = False):
             # Sleep for 10 seconds before checking the order status again
             time.sleep(10)
             # Update time_runner
-            time_runner = float((expiration_time - int(time.time()))/ 60)
+            time_runner = int((expiration_time - int(time.time()))/ 60)
             # Check the status of the order
             order_info = session.get_active_order(symbol= SYMBOL)
             order_status = str(order_info['result']["data"][0]['order_status'])
