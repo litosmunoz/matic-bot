@@ -7,7 +7,7 @@
 SYMBOL = "MATICUSDT"
 INTERVAL = "5m"
 RSI_ENTER = 26
-D_DIFF = 0.05
+D_DIFF = 0.045
 K_ENTER = 0.25
 RSI_EXIT = 74
 RSI_WINDOW = 14
@@ -112,7 +112,7 @@ class Signals:
     # Is the trigger fulfilled and are all buying conditions fulfilled?
     def decide(self):
          self.df["trigger"] = np.where(self.get_trigger(), 1, 0)
-         self.df["Buy"]= np.where((self.df.trigger)
+         self.df["Buy"]= np.where((self.df.trigger) &
                                     (self.df["K"] < K_ENTER) &
                                     (self.df["K"] > self.df["D"] + D_DIFF), 1, 0)
 
