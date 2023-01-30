@@ -16,7 +16,6 @@ REWARD = 1.06
 RISK = 0.98
 LIMIT_ORDER = 0.98
 MINUTES = 300
-QUANTITY = 1000
 
 
 import pandas as pd
@@ -154,7 +153,7 @@ def send_email(subject, result = None, buy_price = None, exit_price = None, stop
 # In[9]:
 
 
-def strategy_long(qty = QUANTITY, open_position = False):
+def strategy_long(qty, open_position = False):
     df= get5minutedata()
     apply_technicals(df)
     inst = Signals(df, 1)
@@ -181,8 +180,8 @@ def strategy_long(qty = QUANTITY, open_position = False):
         order = session.place_active_order(symbol=SYMBOL,
                                             side="Buy",
                                             order_type="Limit",
-                                            qty= qty,
                                             price = buyprice_limit,
+                                            qty= qty,
                                             time_in_force="GoodTillCancel",
                                             reduce_only=False,
                                             close_on_trigger=False,
@@ -207,9 +206,11 @@ def strategy_long(qty = QUANTITY, open_position = False):
             # Check the status of the order
             order_info = session.get_active_order(symbol= SYMBOL)
             order_status = str(order_info['result']["data"][0]['order_status'])
+            print(f"Limit Buyprice: {buyprice_limit}")
+            print(f'Current Price: {round(df.Close.iloc[-1],4)}')
             print(f'Order Status: {order_status}')
-            print(f'Time (mins) remaining for the order to be filled : {time_runner}')
-            print("--------------------------------------------------------------------")
+            print("Remaining minutes: ", time_runner)
+            print("-------------------------------------")
 
             # If the order has been filled or cancelled, exit the loop
             if order_status in ["Filled"]:
@@ -242,7 +243,7 @@ def strategy_long(qty = QUANTITY, open_position = False):
         time.sleep(10)
         df = get5minutedata()
         apply_technicals(df)
-        current_price = round(df.Close.iloc[-1], 2)
+        current_price = round(df.Close.iloc[-1], 4)
         current_profit = round((current_price-buyprice_limit) * qty, 2)
         print(f"Buyprice: {buyprice_limit}" + '             Close: ' + str(df.Close.iloc[-1]))
         print(f'Target: ' + str(tp) + "                Stop: " + str(sl))
@@ -293,5 +294,5 @@ def strategy_long(qty = QUANTITY, open_position = False):
 
 
 while True: 
-    strategy_long(QUANTITY)
+    strategy_long(800)
     time.sleep(120)
