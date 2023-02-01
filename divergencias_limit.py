@@ -175,7 +175,7 @@ def strategy_long(qty, open_position = False):
 
                 print("-----------------------------------------------------------------------------------------------------------------------------------------------")
 
-                order = session.place_active_order(symbol=SYMBOL,
+                '''order = session.place_active_order(symbol=SYMBOL,
                                             side="Buy",
                                             order_type="Limit",
                                             qty= qty,
@@ -185,7 +185,7 @@ def strategy_long(qty, open_position = False):
                                             close_on_trigger=False,
                                             take_profit = tp,
                                             stop_loss = sl)
-                print(order)
+                print(order)'''
 
                 break
 
@@ -203,8 +203,23 @@ def strategy_long(qty, open_position = False):
             time.sleep(10)
             # Update time_runner
             time_runner = int((expiration_time - int(time.time()))/ 60)
+
+            print(f"Limit Buyprice: {buyprice_limit}")
+            print(f'Current Price: {round(df.Close.iloc[-1],4)}')
+            print("Remaining minutes: ", time_runner)
+
+            if round(df.Close.iloc[-1],4) <= buyprice_limit:
+                open_position=True 
+                send_email(subject=f"{SYMBOL} Long Limit Order Activated")
+                break
+        
+        else: 
+            send_email(subject= f"{SYMBOL} Long Limit Order desactivated...")
+            open_position= False
+
+
             # Check the status of the order
-            order_info = session.get_active_order(symbol= SYMBOL)
+            '''order_info = session.get_active_order(symbol= SYMBOL)
             order_status = str(order_info['result']["data"][0]['order_status'])
             print(f'Order Status: {order_status}')
             print("Remaining minutes: ", time_runner)
@@ -234,7 +249,7 @@ def strategy_long(qty, open_position = False):
                     open_position= False
                     
                 except: 
-                    print("No orders need to be cancelled")
+                    print("No orders need to be cancelled")'''
         
 
     while open_position:
@@ -269,5 +284,5 @@ def strategy_long(qty, open_position = False):
 
 
 while True: 
-    strategy_long(0.6)
+    strategy_long(800)
     time.sleep(15)
