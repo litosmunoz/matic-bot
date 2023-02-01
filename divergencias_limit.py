@@ -191,7 +191,7 @@ def strategy_long(qty, open_position = False):
 
         else:
             print(f"{MINUTES_DIVERGENCE} minutes have passed. Restarting program.")
-            return strategy_long()
+            open_position= False
 
 
         # Set the expiration time for the order (200 mins from now)
