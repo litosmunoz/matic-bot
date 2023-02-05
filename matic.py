@@ -3,6 +3,22 @@
 
 # In[1]:
 
+import atexit
+import logging
+import sys
+import pandas as pd
+import numpy as np
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from dotenv import load_dotenv
+import os
+import time
+import ta
+import warnings
+warnings.simplefilter("ignore")
+
+
 # Variables
 SYMBOL = "MATICUSDT"
 INTERVAL = "5m"
@@ -18,18 +34,15 @@ LIMIT_ORDER = 0.98
 MINUTES = 300
 
 
-import pandas as pd
-import numpy as np
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from dotenv import load_dotenv
-import os
-import time
-import ta 
-import warnings
-warnings.simplefilter("ignore")
+def exit_handler():
+    print('My application is ending!')
+    sys.stdout = orig_stdout
+    f.close()
 
+atexit.register(exit_handler)
+orig_stdout = sys.stdout
+f = open('matic.txt', 'w')
+sys.stdout = f
 
 # In[2]:
 
@@ -177,7 +190,7 @@ def strategy_long(qty, open_position = False):
 
         print("-----------------------------------------------------------------------------------------------------------------------------------------------")
 
-        order = session.place_active_order(symbol=SYMBOL,
+        '''order = session.place_active_order(symbol=SYMBOL,
                                             side="Buy",
                                             order_type="Limit",
                                             price = buyprice_limit,
@@ -192,7 +205,7 @@ def strategy_long(qty, open_position = False):
         matic_order_id = str(order['result']['order_id'])
         print("-----------------------------------------------------------------------------------------------------------------------------------------------")
         print(f"Order id: {matic_order_id}") 
-        print("---------------------------------------------------")
+        print("---------------------------------------------------")'''
 
         # Set the expiration time for the order (300 mins from now)
         expiration_time = int(time.time()) + (MINUTES*60)
@@ -203,7 +216,27 @@ def strategy_long(qty, open_position = False):
             time.sleep(10)
             # Update time_runner
             time_runner = int((expiration_time - int(time.time()))/ 60)
-            # Check the status of the order
+            df= get5minutedata()
+            apply_technicals(df)
+            print(f"Limit Buyprice: {buyprice_limit}")
+
+            current_price = round(df.Close.iloc[-1], 4)
+            print(f'Current Price: {round(df.Close.iloc[-1],4)}')
+            
+            print("Remaining minutes: ", time_runner)
+            print("-------------------------------------")
+
+            if current_price <= buyprice_limit:
+                open_position=True 
+                send_email(subject=f"{SYMBOL} Long Limit Order Activated")
+                break
+        
+        if open_position == False:
+            send_email(subject= f"{SYMBOL} Long Limit Order desactivated...")
+
+
+
+        ''' # Check the status of the order
             order_info = session.get_active_order(symbol= SYMBOL)
             order_status = str(order_info['result']["data"][0]['order_status'])
             print(f"Limit Buyprice: {buyprice_limit}")
@@ -212,7 +245,7 @@ def strategy_long(qty, open_position = False):
             print("Remaining minutes: ", time_runner)
             print("-------------------------------------")
 
-            # If the order has been filled or cancelled, exit the loop
+        # If the order has been filled or cancelled, exit the loop
             if order_status in ["Filled"]:
                 open_position = True
                 send_email(subject=f"{SYMBOL} Limit Order Activated")
@@ -237,7 +270,7 @@ def strategy_long(qty, open_position = False):
                     open_position= False
                     
                 except: 
-                    print("No orders need to be cancelled")
+                    print("No orders need to be cancelled")'''
 
     while open_position:
         time.sleep(10)
@@ -270,14 +303,14 @@ def strategy_long(qty, open_position = False):
         elif df.RSI[-1] > RSI_EXIT:
             
             try:
-                print(session.place_active_order(symbol=SYMBOL,
+                '''print(session.place_active_order(symbol=SYMBOL,
                                                 side="Sell",
                                                 order_type="Market",
                                                 qty= qty,
                                                 time_in_force="GoodTillCancel",
                                                 reduce_only=True,
                                                 close_on_trigger=False)) 
-                print("--------------------")  
+                print("--------------------")'''
                 rsi_exit_price = round(df.Close.iloc[-1],4)
                 result= round((rsi_exit_price - buyprice_limit)*qty, 2)           
                 print("Closed position")
@@ -294,5 +327,5 @@ def strategy_long(qty, open_position = False):
 
 
 while True: 
-    strategy_long(5)
+    strategy_long(800)
     time.sleep(120)

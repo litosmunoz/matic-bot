@@ -1,6 +1,22 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import atexit
+import logging
+import sys
+import pandas as pd
+import numpy as np
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from dotenv import load_dotenv
+import os
+import time
+import ta
+import warnings
+warnings.simplefilter("ignore")
+
+
 # Variables
 SYMBOL = "MATICUSDT"
 INTERVAL = "5m"
@@ -15,22 +31,18 @@ MINUTES_DIVERGENCE = 150
 MINUTES_LIMIT_ORDER = 300
 
 
-import logging
-import pandas as pd
-import numpy as np
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from dotenv import load_dotenv
-import os
-import time
-import ta 
-import warnings
-warnings.simplefilter("ignore")
+def exit_handler():
+    print('My application is ending!')
+    sys.stdout = orig_stdout
+    f.close()
 
+atexit.register(exit_handler)
+orig_stdout = sys.stdout
+f = open('matic_dl.txt', 'w')
+sys.stdout = f
 
 # Set up logging
-logging.basicConfig(filename='strategy.log', level=logging.INFO,
+logging.basicConfig(filename='matic_dl.log', level=logging.INFO,
                     format='%(asctime)s %(message)s')
 
 # In[1]::
@@ -132,7 +144,7 @@ If the RSI increases to above a certain threshold and the close price of Ethereu
 If {MINUTES_DIVERGENCE} minutes pass and the condition has not been met, the program restarts.
 If the condition is met, the code monitors the status of the order and cancels the order if it has not been filled within minutes.'''
 
-def strategy_long(qty, open_position = False):
+def strategy_long(qty, placed_limit_order = False, open_position = False):
     df= get5minutedata()
     apply_technicals(df)
     print(f'Current Time is ' + str(df.index[-1]))
@@ -146,8 +158,10 @@ def strategy_long(qty, open_position = False):
     it creates a limit order to enters a long position in Ethereum using the session.place_active_order() function and sends an email to the user.'''
 
     if round(df.RSI.iloc[-1], 2) < RSI_THRESHOLD_LOW:
-        previous_price = round(df.Close.iloc[-1], 2)
+        previous_price = round(df.Close.iloc[-1], 4)
         start_time = int(time.time())
+        send_email(subject = f"{SYMBOL} - Might Open Long Order Soon (RSI {RSI_THRESHOLD_LOW})")
+
         while (int(time.time()) - start_time) < (MINUTES_DIVERGENCE * 60):
             df = get5minutedata()
             apply_technicals(df)
@@ -162,12 +176,12 @@ def strategy_long(qty, open_position = False):
 
             if round(df["RSI"].iloc[-1], 2) >= RSI_THRESHOLD_HIGH and round(df['Close'].iloc[-1],2) < previous_price:
                 # If the RSI increases to 30 and the price makes a lower low, enter a long position in Ethereum
-                print('Consider entering a long position in Ethereum')
-                price = round(df.Close.iloc[-1],2)
-                buyprice_limit = round(price * LIMIT_ORDER,2)
-                tp = round(buyprice_limit * REWARD,2)
-                sl = round(buyprice_limit * RISK,2)
-                send_email(subject = f"{SYMBOL} Open Long Limit Order", buy_price=buyprice_limit, exit_price=tp, stop=sl)
+                print(f'Consider entering a long position in {SYMBOL}')
+                price = round(df.Close.iloc[-1],4)
+                buyprice_limit = round(price * LIMIT_ORDER,4)
+                tp = round(buyprice_limit * REWARD,4)
+                sl = round(buyprice_limit * RISK,4)
+                send_email(subject = f"{SYMBOL} Open Long Limit Order DL", buy_price=buyprice_limit, exit_price=tp, stop=sl)
 
                 print("-----------------------------------------")
 
@@ -187,11 +201,13 @@ def strategy_long(qty, open_position = False):
                                             stop_loss = sl)
                 print(order)'''
 
+                placed_limit_order = True
+
                 break
 
-        else:
+        if placed_limit_order== False:
             print(f"{MINUTES_DIVERGENCE} minutes have passed. Restarting program.")
-            open_position= False
+            send_email(subject = f"{SYMBOL} - {MINUTES_DIVERGENCE} mins and NO DIVERGENCE")
 
 
         # Set the expiration time for the order (200 mins from now)
@@ -203,19 +219,23 @@ def strategy_long(qty, open_position = False):
             time.sleep(10)
             # Update time_runner
             time_runner = int((expiration_time - int(time.time()))/ 60)
-
+            df= get5minutedata()
+            apply_technicals(df)
             print(f"Limit Buyprice: {buyprice_limit}")
-            print(f'Current Price: {round(df.Close.iloc[-1],4)}')
-            print("Remaining minutes: ", time_runner)
 
-            if round(df.Close.iloc[-1],4) <= buyprice_limit:
+            current_price = round(df.Close.iloc[-1], 4)            
+            print(f'Current Price: {round(df.Close.iloc[-1],4)}')
+
+            print("Remaining minutes: ", time_runner)
+            print("-----------------------------------------")
+
+            if current_price <= buyprice_limit:
                 open_position=True 
                 send_email(subject=f"{SYMBOL} Long Limit Order Activated")
                 break
         
-        else: 
+        if open_position == False:
             send_email(subject= f"{SYMBOL} Long Limit Order desactivated...")
-            open_position= False
 
 
             # Check the status of the order
@@ -256,8 +276,8 @@ def strategy_long(qty, open_position = False):
         time.sleep(15)
         df = get5minutedata()
         apply_technicals(df)
-        current_price = round(df.Close.iloc[-1], 2)
-        current_profit = round((current_price-buyprice_limit) * qty, 2)
+        current_price = round(df.Close.iloc[-1], 4)
+        current_profit = round((current_price-buyprice_limit) * qty, 4)
         print(f"Buyprice: {buyprice_limit}" + '             Close: ' + str(df.Close.iloc[-1]))
         print(f'Target: ' + str(tp) + "                Stop: " + str(sl))
         print(f'RSI: {round(df.RSI.iloc[-1], 2)}')
