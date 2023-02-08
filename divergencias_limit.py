@@ -215,24 +215,33 @@ def strategy_long(qty, placed_limit_order = False, open_position = False):
         
         # Wait until the expiration time
         while int(time.time()) < expiration_time:
-            # Sleep for 10 seconds before checking the order status again
-            time.sleep(10)
-            # Update time_runner
-            time_runner = int((expiration_time - int(time.time()))/ 60)
-            df= get5minutedata()
-            apply_technicals(df)
-            print(f"Limit Buyprice: {buyprice_limit}")
+            for i in range(5):
+                try: 
+                    # Sleep for 10 seconds before checking the order status again
+                    time.sleep(10)
+                    # Update time_runner
+                    time_runner = int((expiration_time - int(time.time()))/ 60)
+                    df= get5minutedata()
+                    apply_technicals(df)
+                    print(f"Limit Buyprice: {buyprice_limit}")
 
-            current_price = round(df.Close.iloc[-1], 4)            
-            print(f'Current Price: {round(df.Close.iloc[-1],4)}')
+                    current_price = round(df.Close.iloc[-1], 4)            
+                    print(f'Current Price: {round(df.Close.iloc[-1],4)}')
 
-            print("Remaining minutes: ", time_runner)
-            print("-----------------------------------------")
+                    print("Remaining minutes: ", time_runner)
+                    print("-----------------------------------------")
 
-            if current_price <= buyprice_limit:
-                open_position=True 
-                send_email(subject=f"{SYMBOL} Long Limit Order Activated")
-                break
+                    if current_price <= buyprice_limit:
+                        open_position=True 
+                        send_email(subject=f"{SYMBOL} Long Limit Order Activated")
+                        break
+
+                except TimeoutError:
+                    if i == 4:
+                        raise
+                    wait_time = 2**i
+                    print(f"Request timed out. Retrying in {wait_time} seconds")
+                    time.sleep(wait_time)
         
         if open_position == False:
             send_email(subject= f"{SYMBOL} Long Limit Order desactivated...")
