@@ -163,51 +163,65 @@ def strategy_long(qty, placed_limit_order = False, open_position = False):
         send_email(subject = f"{SYMBOL} - Might Open Long Order Soon (RSI {RSI_THRESHOLD_LOW})")
 
         while (int(time.time()) - start_time) < (MINUTES_DIVERGENCE * 60):
-            df = get5minutedata()
-            apply_technicals(df)
-            time_runner = (MINUTES_DIVERGENCE * 60) - ((int(time.time()) - start_time))
-            remaining_minutes = int(time_runner / 60)
-            print(f'Current Close is '+str(df.Close.iloc[-1]))
-            print(f"RSI: {round(df.RSI.iloc[-1], 2)}")
-            print(f"Searching for RSI > {RSI_THRESHOLD_HIGH} and a Lower Low than {previous_price}")
-            print("Remaining minutes: ", remaining_minutes)
-            print("-------------------------------------------------------------------------------")
-            time.sleep(60) # sleep for 60 secs
+            for i in range(5):
+                    try:
+                        df = get5minutedata()
+                        apply_technicals(df)
+                        time_runner = (MINUTES_DIVERGENCE * 60) - ((int(time.time()) - start_time))
+                        remaining_minutes = int(time_runner / 60)
+                        print(f'Current Close is '+str(df.Close.iloc[-1]))
+                        print(f"RSI: {round(df.RSI.iloc[-1], 2)}")
+                        print(f"Searching for RSI > {RSI_THRESHOLD_HIGH} and a Lower Low than {previous_price}")
+                        print("Remaining minutes: ", remaining_minutes)
+                        print("-------------------------------------------------------------------------------")
+                        time.sleep(60) # sleep for 60 secs
 
-            if round(df["RSI"].iloc[-1], 2) >= RSI_THRESHOLD_HIGH and round(df['Close'].iloc[-1],2) < previous_price:
-                # If the RSI increases to 30 and the price makes a lower low, enter a long position in Ethereum
-                print(f'Consider entering a long position in {SYMBOL}')
-                price = round(df.Close.iloc[-1],4)
-                buyprice_limit = round(price * LIMIT_ORDER,4)
-                tp = round(buyprice_limit * REWARD,4)
-                sl = round(buyprice_limit * RISK,4)
-                send_email(subject = f"{SYMBOL} Open Long Limit Order DL", buy_price=buyprice_limit, exit_price=tp, stop=sl)
+                        if round(df["RSI"].iloc[-1], 2) >= RSI_THRESHOLD_HIGH and round(df['Close'].iloc[-1],2) < previous_price:
+                            # If the RSI increases to 30 and the price makes a lower low, enter a long position in Ethereum
+                            print(f'Consider entering a long position in {SYMBOL}')
+                            price = round(df.Close.iloc[-1],4)
+                            buyprice_limit = round(price * LIMIT_ORDER,4)
+                            tp = round(buyprice_limit * REWARD,4)
+                            sl = round(buyprice_limit * RISK,4)
+                            send_email(subject = f"{SYMBOL} Open Long Limit Order DL", buy_price=buyprice_limit, exit_price=tp, stop=sl)
 
-                print("-----------------------------------------")
+                            print("-----------------------------------------")
 
-                print(f"Limit Buyprice: {buyprice_limit}")
+                            print(f"Limit Buyprice: {buyprice_limit}")
 
-                print("-----------------------------------------------------------------------------------------------------------------------------------------------")
+                            print("-----------------------------------------------------------------------------------------------------------------------------------------------")
 
-                '''order = session.place_active_order(symbol=SYMBOL,
-                                            side="Buy",
-                                            order_type="Limit",
-                                            qty= qty,
-                                            price = buyprice_limit,
-                                            time_in_force="GoodTillCancel",
-                                            reduce_only=False,
-                                            close_on_trigger=False,
-                                            take_profit = tp,
-                                            stop_loss = sl)
-                print(order)'''
+                            '''order = session.place_active_order(symbol=SYMBOL,
+                                                        side="Buy",
+                                                        order_type="Limit",
+                                                        qty= qty,
+                                                        price = buyprice_limit,
+                                                        time_in_force="GoodTillCancel",
+                                                        reduce_only=False,
+                                                        close_on_trigger=False,
+                                                        take_profit = tp,
+                                                        stop_loss = sl)
+                            print(order)'''
 
-                placed_limit_order = True
+                            placed_limit_order = True
 
-                break
+                            break
+
+                    except TimeoutError:
+                        if i == 4:
+                            raise
+                        wait_time = 2**i
+                        print(f"Request timed out. Retrying in {wait_time} seconds")
+                        time.sleep(wait_time)
 
         if placed_limit_order== False:
-            print(f"{MINUTES_DIVERGENCE} minutes have passed. Restarting program.")
-            send_email(subject = f"{SYMBOL} - {MINUTES_DIVERGENCE} mins and NO DIVERGENCE")
+            try:
+                print(f"{MINUTES_DIVERGENCE} minutes have passed. Restarting program.")
+                send_email(subject = f"{SYMBOL} - {MINUTES_DIVERGENCE} mins and NO DIVERGENCE")
+            except Exception as e:
+                print(f"Error sending deactivation email: {e}")
+        elif placed_limit_order == True:
+            pass
 
 
         # Set the expiration time for the order (200 mins from now)
