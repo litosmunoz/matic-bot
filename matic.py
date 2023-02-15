@@ -234,9 +234,10 @@ def strategy_long(qty, open_position = False):
         apply_technicals(df)
         current_price = round(df.Close.iloc[-1], 4)
         current_profit = round((current_price-buyprice_limit) * qty, 2)
+        RSI = round(df.RSI.iloc[-1], 2)
         print(f"Buyprice: {buyprice_limit}" + '             Close: ' + str(df.Close.iloc[-1]))
         print(f'Target: ' + str(tp) + "                Stop: " + str(sl))
-        print(f"RSI: {round(df.RSI.iloc[-1], 2)}       K: {round(df.K.iloc[-1], 2)}       D: {round(df.D.iloc[-1], 2)}")
+        print(f"RSI: {RSI}       K: {round(df.K.iloc[-1], 2)}       D: {round(df.D.iloc[-1], 2)}")
         print(f'RSI Target: {RSI_EXIT}')
         print(f"K > D: {round(df.K.iloc[-1], 2) > round(df.D.iloc[-1], 2)}")
         print(f'Current Profit : {current_profit}')
@@ -256,7 +257,7 @@ def strategy_long(qty, open_position = False):
             open_position = False
             break
 
-        elif df.RSI[-1] > RSI_EXIT:
+        elif RSI >= RSI_EXIT:
             
             try:
                 rsi_exit_price = round(df.Close.iloc[-1],4)
