@@ -10,7 +10,7 @@ The project consists of three main folders:
 
 In this README file, we will be focusing on the matic.py file located in the Bots folder, which contains the code for a trading bot that trades the MATIC/USDT pair on the Bybit exchange.
 
-### matic.py 
+#### matic.py 
 
 This is a Python-based trading bot that utilizes the Bybit API to implement a long position strategy for the MATIC/USDT cryptocurrency pair. The bot takes advantage of technical analysis indicators, such as RSI and Stochastic RSI, to make decisions on when to enter and exit the market.
 
