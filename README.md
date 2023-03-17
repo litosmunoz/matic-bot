@@ -1,4 +1,6 @@
-# Trading Bot with Python and Bybit API
+# MATIC Bots
+
+## Trading Bot with Python and Bybit API
 
 ### Project Structure
 The project consists of three main folders:
