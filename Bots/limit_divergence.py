@@ -137,12 +137,6 @@ def send_email(subject, result = None, buy_price = None, exit_price = None, stop
 
 
 # In[7]:
-f'''It starts by getting the 5-minute data for Ethereum and applying certain technical indicators to it.
-It then checks if the value of the 'Buy' column in the last row of the dataframe is True.
-If it is True, it enters a while loop where it continuously monitors the RSI and close price of Ethereum.
-If the RSI increases to above a certain threshold and the close price of Ethereum makes a lower low, it creates a limit order to enter a long position in Ethereum and sends an email to the user.
-If {MINUTES_DIVERGENCE} minutes pass and the condition has not been met, the program restarts.
-If the condition is met, the code monitors the status of the order and cancels the order if it has not been filled within minutes.'''
 
 def strategy_long(qty, placed_limit_order = False, open_position = False):
     df= get5minutedata()
@@ -152,11 +146,7 @@ def strategy_long(qty, placed_limit_order = False, open_position = False):
     print(f"RSI: {round(df.RSI.iloc[-1], 2)}")
     print("-----------------------------------------")
 
-    '''The following algorithm checks if the RSI is less than {RSI_THRESHOLD_LOW} ex. 20 and then it enters a while loop. 
-    Inside the while loop, it continuously monitors the RSI and the close price of Ethereum. 
-    Once the RSI increases to above {RSI_THRESHOLD_HIGH} ex. 30 and the close price of Ethereum makes a lower low, 
-    it creates a limit order to enters a long position in Ethereum using the session.place_active_order() function and sends an email to the user.'''
-
+    
     if round(df.RSI.iloc[-1], 2) < RSI_THRESHOLD_LOW:
         previous_price = round(df.Close.iloc[-1], 4)
         start_time = int(time.time())
